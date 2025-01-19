@@ -46,7 +46,8 @@ def transcribe_audio(filename):
      # The name of the audio file to transcribe
     gcs_uri = "gs://cloud-samples-data/speech/brooklyn_bridge.raw"
 
-    audio = speech.RecognitionAudio(uri=gcs_uri)
+    # audio = speech.RecognitionAudio(uri=gcs_uri)
+    audio = speech.RecognitionAudio(content=content)
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=16000,
