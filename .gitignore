@@ -1,0 +1,32 @@
+# Ignore virtual environment directory
+ielts_env/
+.env
+
+# Ignore Python bytecode files
+__pycache__/
+*.py[cod]
+
+# Ignore environment variables and API keys
+ielts_simulation\.env
+*.json
+ielts-simulation-448302-2fd2169fe49e.json
+
+# Ignore IDE/editor configurations
+.vscode/
+.idea/
+
+# Ignore logs and runtime files
+*.log
+*.sqlite3
+
+# Ignore OS-generated files
+.DS_Store
+Thumbs.db
+
+# Ignore dependencies if using pip freeze
+requirements.txt.lock
+
+# Ignore temporary files
+*.tmp
+*.bak
+*.swp
