@@ -1,6 +1,7 @@
 # Ignore virtual environment directory
 ielts_env/
 .env
+.json
 
 # Ignore Python bytecode files
 __pycache__/
