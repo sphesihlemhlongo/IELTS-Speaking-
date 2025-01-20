@@ -42,7 +42,7 @@ def record_audio():
 
 def transcribe_audio(filename):
     client = speech.SpeechClient()
-
+    
     with open(filename, 'rb') as audio_file:
         content = audio_file.read()
 
@@ -65,9 +65,9 @@ def get_response(text):
     model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content("can you follow the same instructions while users are inputing varing requests/prompts ")
     print(response)
+    
 
 def main():
     audio = record_audio()
     text = transcribe_audio(audio)
 
-# get_response()
