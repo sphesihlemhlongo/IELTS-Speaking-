@@ -1,44 +1,65 @@
 import os
 import pyaudio
 import wave
-
-# from flask import Flask
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 from dotenv import load_dotenv
 from google.cloud import speech
 import google.generativeai as genai
+from threading import Thread
 
 load_dotenv()
-
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 genai.configure(api_key=os.getenv("Gemini_API_Key"))
 
 
-def record_audio():
-    # Set up PyAudio to capture audio from the microphone
-    p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=1024)
+app = Flask(__name__)
+CORS(app) 
+
+# Global variables to control recording state
+is_recording = False
+frames = []
+
+@app.route('/api/start-record', methods=['POST'])
+def start_record():
+    global is_recording, frames
+    is_recording = True
     frames = []
-    print("Recording...")
 
-    # Record for 5 seconds (can adjust for longer speech duration)
-    for i in range(0, int(16000 / 1024 * 5)):
-        data = stream.read(1024)
-        frames.append(data)
+    # Start recording in a separate thread
+    def record():
+        global is_recording, frames
+        p = pyaudio.PyAudio()
+        stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=1024)
 
-    print("Recording finished.")
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+        while is_recording:
+            data = stream.read(1024)
+            frames.append(data)
+
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+    thread = Thread(target=record)
+    thread.start()
+
+    return jsonify({"message": "Recording started"})
+
+
+@app.route('/api/stop-record', methods=['POST'])
+def stop_record():
+    global is_recording, frames
+    is_recording = False
 
     # Save audio to a .wav file
     filename = "audio.wav"
     with wave.open(filename, 'wb') as wf:
         wf.setnchannels(1)
-        wf.setsampwidth(p.get_sample_size(pyaudio.paInt16))
+        wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
         wf.setframerate(16000)
         wf.writeframes(b''.join(frames))
 
-    return filename
+    return jsonify({"message": "Recording stopped", "filename": filename})
 
 def transcribe_audio(filename):
     client = speech.SpeechClient()
@@ -61,13 +82,59 @@ def transcribe_audio(filename):
         print("Transcript: {}".format(result.alternatives[0].transcript))
     return result.alternatives[0].transcript
 
-def get_response(text):
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content("can you follow the same instructions while users are inputing varing requests/prompts ")
-    print(response)
+def get_response(user_input):
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(
+            f"You are an IELTS examiner. Respond to the following candidate answer: '{user_input}'"
+        )
+        print(response.text)
+        return response.text
+    except Exception as e:
+        return str(e)
     
+@app.route('/generate_response', methods=['POST'])
+def generate_response():
+    data = request.get_json()
+    user_transcription = data.get('transcription', '')
 
-def main():
-    audio = record_audio()
-    text = transcribe_audio(audio)
+    if not user_transcription:
+        return jsonify({"error": "No transcription provided"}), 400
 
+    try:
+        # Generate response using Gemini
+        ai_response = get_response(user_transcription)
+        return jsonify({"ai_response": ai_response})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500    
+
+@app.route("/api/record", methods=["POST"])
+def record():
+    audio_file = start_record()
+    return jsonify({"status": "success", "audio_file": audio_file})
+
+
+# Flask route to handle transcription
+@app.route("/api/transcribe", methods=["POST"])
+def transcribe():
+    data = request.get_json()
+    filename = data.get("filename")
+    if not filename:
+        return jsonify({"error": "Filename is required"}), 400
+
+    transcription = transcribe_audio(filename)
+    return jsonify({"transcription": transcription})
+
+# Flask route to generate response
+@app.route("/api/respond", methods=["POST"])
+def respond():
+    data = request.get_json()
+    user_input = data.get("user_input")
+    if not user_input:
+        return jsonify({"error": "User input is required"}), 400
+
+    response = get_response(user_input)
+    return jsonify({"response": response})
+
+if __name__ == "__main__":
+    app.run(debug=True)
