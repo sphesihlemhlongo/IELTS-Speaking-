@@ -20,6 +20,71 @@ CORS(app)
 is_recording = False
 frames = []
 
+prompts = {
+    "part_1": [
+        "Can you tell me about yourself?",
+        "What do you do? Do you work or study?",
+        "What are your hobbies?",
+        "Do you like traveling? Why or why not?"
+    ],
+    "part_2": [
+        "Describe a memorable trip you took. You should say:\n- Where you went\n- Who you went with\n- What you did\nAnd explain why it was memorable.",
+        "Describe a favorite book you’ve read. You should say:\n- What it is\n- Who wrote it\n- What it is about\nAnd explain why you enjoyed it."
+    ],
+    "part_3": [
+        "Why do you think people enjoy traveling to new places?",
+        "How does reading books contribute to personal growth?",
+        "What is the importance of leisure activities in a busy lifestyle?"
+    ]
+}
+
+# Track test progress (simplified; can be enhanced with a database)
+test_progress = {}
+
+@app.route('/start_test', methods=['POST'])
+def start_test():
+    user_id = request.json.get('user_id', 'default_user')
+    test_progress[user_id] = {"current_section": "part_1", "question_index": 0}
+    question = prompts["part_1"][0]
+    return jsonify({"section": "part_1", "question": question})
+
+@app.route('/next_question', methods=['POST'])
+def next_question():
+    user_id = request.json.get('user_id', 'default_user')
+    progress = test_progress.get(user_id, {})
+    section = progress.get("current_section", "part_1")
+    question_index = progress.get("question_index", 0)
+
+    if section == "part_1":
+        if question_index < len(prompts["part_1"]) - 1:
+            question_index += 1
+            test_progress[user_id]["question_index"] = question_index
+        else:
+            section = "part_2"
+            question_index = 0
+            test_progress[user_id]["current_section"] = section
+            test_progress[user_id]["question_index"] = question_index
+
+    elif section == "part_2":
+        if question_index < len(prompts["part_2"]) - 1:
+            question_index += 1
+            test_progress[user_id]["question_index"] = question_index
+        else:
+            section = "part_3"
+            question_index = 0
+            test_progress[user_id]["current_section"] = section
+            test_progress[user_id]["question_index"] = question_index
+
+    elif section == "part_3":
+        if question_index < len(prompts["part_3"]) - 1:
+            question_index += 1
+            test_progress[user_id]["question_index"] = question_index
+        else:
+            return jsonify({"message": "Test completed!"})
+
+    question = prompts[section][question_index]
+    return jsonify({"section": section, "question": question})
+
 @app.route('/api/start-record', methods=['POST'])
 def start_record():
     global is_recording, frames
@@ -44,7 +109,6 @@ def start_record():
     thread.start()
 
     return jsonify({"message": "Recording started"})
-
 
 @app.route('/api/stop-record', methods=['POST'])
 def stop_record():
