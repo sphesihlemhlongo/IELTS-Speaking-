@@ -1,0 +1,13 @@
+version: '3'
+services:
+  frontend:
+    build:
+      context: ./ielts-frontend
+    ports:
+      - "80:80"
+  
+  backend:
+    build:
+      context: ./ielts_simulation
+    ports:
+      - "5000:5000"
