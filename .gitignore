@@ -31,3 +31,4 @@ requirements.txt.lock
 *.tmp
 *.bak
 *.swp
+.vercel

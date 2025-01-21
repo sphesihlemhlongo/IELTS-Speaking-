@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\Saira\Documents\Challenges\EasyPeasy Challenges\ielts_env
+set VIRTUAL_ENV=C:\Users\Saira\Documents\Challenges\EasyPeasy Challenge_1\ielts_env
 
 if not defined PROMPT set PROMPT=$P$G
 
