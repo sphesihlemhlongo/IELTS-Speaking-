@@ -65,73 +65,75 @@ function App() {
   const handleGenerateResponse = () => {
     axios
         .post("http://127.0.0.1:5000/generate_response", {
-            user_id: "test_user",
-            transcription,
+          user_id: "test_user",
+          transcription: transcription,
         })
-        .then((res) => {
-            setAiResponse(res.data.response);
+        .then((response) => {
+            setAiResponse(response.data.ai_response);
         })
-        .catch((err) => console.error(err));
+        .catch((error) => {
+            console.error("Error generating response:", error);
+        });
 };
 
-return (
-  <div className="App">
-      <h1>IELTS Speaking Test</h1>
-      {testCompleted ? (
-          <h2>Congratulations! You’ve completed the test.</h2>
-      ) : (
-          <>
-              {!section && (
-                  <button onClick={startTest}>Start Test</button>
-              )}
-              {section && (
-                  <div>
-                      <h2>Section: {section}</h2>
-                      <p>{question}</p>
+  return (
+        <div className="App">
+            <h1>IELTS Speaking Test</h1>
+            {testCompleted ? (
+                <h2>Congratulations! You’ve completed the test.</h2>
+            ) : (
+                <>
+                    {!section && (
+                        <button onClick={startTest}>Start Test</button>
+                    )}
+                    {section && (
+                        <div>
+                            <h2>Section: {section}</h2>
+                            <p>{question}</p>
 
-                      {/* Recording controls */}
-                      {!isRecording ? (
-                          <button onClick={startRecording}>
-                              Start Recording
-                          </button>
-                      ) : (
-                          <button onClick={stopRecording}>
-                              Stop Recording
-                          </button>
-                      )}
+                            {/* Recording controls */}
+                            {!isRecording ? (
+                                <button onClick={startRecording}>
+                                    Start Recording
+                                </button>
+                            ) : (
+                                <button onClick={stopRecording}>
+                                    Stop Recording
+                                </button>
+                            )}
 
-                      {/* Transcription display */}
-                      <div>
-                          <textarea
-                              placeholder="User's transcribed answer will appear here..."
-                              value={transcription}
-                              onChange={(e) =>
-                                  setTranscription(e.target.value)
-                              }
-                              rows="4"
-                              cols="50"
-                          />
-                          <button onClick={handleGenerateResponse}>
-                              Get Examiner's Response
-                          </button>
-                      </div>
+                            {/* Transcription display */}
+                            <div>
+                                <textarea
+                                    placeholder="User's transcribed answer will appear here..."
+                                    value={transcription}
+                                    onChange={(e) =>
+                                        setTranscription(e.target.value)
+                                    }
+                                    rows="4"
+                                    cols="50"
+                                />
+                                <button onClick={handleGenerateResponse}>
+                                    Get Examiner's Response
+                                </button>
+                            </div>
 
-                      {/* AI Examiner's Response */}
-                      <div>
-                          <h2>Examiner's Response:</h2>
-                          <p>{aiResponse}</p>
-                      </div>
+                            {/* AI Examiner's Response */}
+                            <div>
+                                <h2>Examiner's Response:</h2>
+                                <p>{aiResponse}</p>
+                            </div>
 
-                      {/* Next question button */}
-                      <button onClick={nextQuestion}>
-                          Next Question
-                      </button>
-                  </div>
-              )}
-          </>
-      )}
-  </div>
-);
+                            {/* Next question button */}
+                            <button onClick={nextQuestion}>
+                                Next Question
+                            </button>
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
 };
 
 export default App;

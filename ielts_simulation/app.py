@@ -144,15 +144,17 @@ def transcribe_audio(filename):
     # Print the transcription result
     for result in response.results:
         print("Transcript: {}".format(result.alternatives[0].transcript))
-    return result.alternatives[0].transcript
-
+        return result.alternatives[0].transcript
+    return ""
+    
 def get_response(user_input):
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(
             f"You are an IELTS examiner. Respond to the following candidate answer: '{user_input}'"
         )
-        print(response.text)
+        print(f"User Input: {user_input}")  # Log user input
+        print(f"AI Response: {response.text}")  # Log AI response
         return response.text
     except Exception as e:
         return str(e)
@@ -187,6 +189,7 @@ def transcribe():
         return jsonify({"error": "Filename is required"}), 400
 
     transcription = transcribe_audio(filename)
+    print(f"Transcription: {transcription}")  # Log transcription
     return jsonify({"transcription": transcription})
 
 # Flask route to generate response
