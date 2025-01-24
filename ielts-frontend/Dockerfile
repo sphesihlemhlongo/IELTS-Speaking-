@@ -1,11 +1,11 @@
-# Use an official Node.js image to build the React app
-FROM node:16 as build
+FROM node:18-alpine AS build
 
 # Set the working directory
 WORKDIR /app
 
 # Copy package.json and package-lock.json
-COPY package*.json ./
+COPY ./package.json ./package-lock.json ./
+
 
 # Install dependencies
 RUN npm install

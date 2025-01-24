@@ -97,14 +97,22 @@ return (
         ) : (
           <div className="bg-white shadow-md rounded-lg p-6 w-full max-w-3xl">
             {!section ? (
-              <button
-                className="w-full bg-green-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-600 hover:text-white"
-                onClick={startTest}
-              >
-                Start Test
-              </button>
+            <div className="flex space-x-4">
+            <button
+              className="flex-1 bg-green-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-600 hover:text-white"
+              onClick={startTest}
+            >
+              Start Test
+            </button>
+            <button
+              className="flex-1 bg-blue-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-600 hover:text-white"
+              onClick={startTest} // Same function as "Start Test" for now
+            >
+              Practice
+            </button>
+          </div>
             ) : (
-              <div className="space-y-6">
+            <div className="space-y-6">
                 <div
                   className="bg-blue-100 text-blue-800 p-4 rounded shadow-sm"
                 >
