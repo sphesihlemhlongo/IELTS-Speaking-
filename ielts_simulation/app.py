@@ -1,9 +1,11 @@
 import os
 import pyaudio
 import wave
-import numpy as np
-import sounddevice as sd
-from scipy.io.wavfile import write
+import time
+import uuid
+# import numpy as np
+# import sounddevice as sd
+# from scipy.io.wavfile import write
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -17,8 +19,8 @@ load_dotenv()
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 genai.configure(api_key=os.getenv("Gemini_API_Key"))
 
-print(sd.query_devices())
-print("You are screwed")
+# print(sd.query_devices())
+# print("You are screwed")
 app = Flask(__name__, static_folder="build")
 CORS(app) 
 
@@ -30,7 +32,12 @@ def serve():
 def static_proxy(path):
     return send_from_directory(app.static_folder, path)
 
-# Global variables to control recording state
+# Global variables
+def create_session_file(user_id, session_type):
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{user_id}_{session_type}_{timestamp}.txt"
+    return os.path.join("sessions", filename)
+
 is_recording = False
 prompts = {
     "part_1": [
@@ -51,54 +58,146 @@ prompts = {
 }
 frames = []
 samplerate = 16000
-selected_device = None  # To store the selected microphone device
-# Track test progress (simplified; can be enhanced with a database)
 test_progress = {}
+sessions = {}
 
 @app.route('/start_test', methods=['POST'])
 def start_test():
-    user_id = request.json.get('user_id', 'default_user')
+    data = request.json
+    user_id = data.get('user_id', 'default_user')
+    session_type = data.get('session_type', 'practice')  # 'practice' or 'test'
+    filename = create_session_file(user_id, session_type)
 
-    test_progress[user_id] = {"current_section": "part_1", "question_index": 0}
+    sessions[user_id] = {
+        "session_type": session_type,
+        "current_section": "part_1",
+        "question_index": 0,
+        "filename": filename
+    }
+
+    os.makedirs("sessions", exist_ok=True)
+    with open(filename, "w") as f:
+        f.write(f"Session Type: {session_type}\n\n")
+
     question = prompts["part_1"][0]
     return jsonify({"section": "part_1", "question": question})
 
 @app.route('/next_question', methods=['POST'])
 def next_question():
-    user_id = request.json.get('user_id', 'default_user')
-    progress = test_progress.get(user_id, {})
-    section = progress.get("current_section", "part_1")
-    question_index = progress.get("question_index", 0)
+    data = request.json
+    user_id = data.get('user_id', 'default_user')
+    response = data.get('response', '')
+
+    session = sessions.get(user_id, {})
+    section = session.get("current_section", "part_1")
+    question_index = session.get("question_index", 0)
+    filename = session.get("filename")
+
+    if not filename:
+        return jsonify({"error": "Session not started."}), 400
+
+    with open(filename, "a") as f:
+        f.write(f"Q: {prompts[section][question_index]}\nA: {response}\n\n")
 
     if section == "part_1":
         if question_index < len(prompts["part_1"]) - 1:
-            question_index += 1
-            test_progress[user_id]["question_index"] = question_index
+            session["question_index"] += 1
         else:
-            section = "part_2"
-            question_index = 0
-            test_progress[user_id]["current_section"] = section
-            test_progress[user_id]["question_index"] = question_index
+            session["current_section"] = "part_2"
+            session["question_index"] = 0
 
     elif section == "part_2":
         if question_index < len(prompts["part_2"]) - 1:
-            question_index += 1
-            test_progress[user_id]["question_index"] = question_index
+            session["question_index"] += 1
         else:
-            section = "part_3"
-            question_index = 0
-            test_progress[user_id]["current_section"] = section
-            test_progress[user_id]["question_index"] = question_index
+            session["current_section"] = "part_3"
+            session["question_index"] = 0
 
     elif section == "part_3":
         if question_index < len(prompts["part_3"]) - 1:
-            question_index += 1
-            test_progress[user_id]["question_index"] = question_index
+            session["question_index"] += 1
         else:
-            return jsonify({"message": "Test completed!"})
+            return jsonify({"message": "Test completed!", "filename": filename})
 
-    question = prompts[section][question_index]
-    return jsonify({"section": section, "question": question})
+    section = session["current_section"]
+    question_index = session["question_index"]
+    next_question = prompts[section][question_index]
+
+    return jsonify({"section": section, "question": next_question})
+
+def generate_unique_filename(base_name="file", extension="txt", directory="."):
+    """
+    Generate a unique filename by appending a timestamp and a UUID to the base name.
+
+    Parameters:
+        base_name (str): The base name for the file (default is "file").
+        extension (str): The file extension (default is "txt").
+        directory (str): The directory to check for existing filenames (default is the current directory).
+
+    Returns:
+        str: A unique filename.
+    """
+    # Ensure the directory exists
+    os.makedirs(directory, exist_ok=True)
+
+    while True:
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        unique_id = uuid.uuid4().hex[:8]  # Use the first 8 characters of a UUID
+        filename = f"{base_name}_{timestamp}_{unique_id}.{extension}"
+        full_path = os.path.join(directory, filename)
+
+        if not os.path.exists(full_path):
+            return filename
+
+def write_text_to_file(text, filename, directory="./text_files"):
+    """
+    Write the given text to a specified file in the given directory.
+
+    Parameters:
+        text (str): The text content to write to the file.
+        filename (str): The name of the file.
+        directory (str): The directory to save the file.
+
+    Returns:
+        str: Full path to the written text file.
+    """
+    # Ensure the directory exists
+    os.makedirs(directory, exist_ok=True)
+
+    full_path = os.path.join(directory, filename)
+    with open(full_path, 'w', encoding='utf-8') as file:
+        file.write(text)
+
+    return full_path
+
+def save_to_folder(folder_name, file_path):
+    """
+    Save an existing file to the specified folder.
+
+    Parameters:
+        folder_name (str): The name of the folder where the file should be saved.
+        file_path (str): The path to the existing file.
+
+    Returns:
+        str: Full path to the saved file in the new folder.
+    """
+    # Ensure the folder exists
+    os.makedirs(folder_name, exist_ok=True)
+
+    # Get the filename from the provided file path
+    filename = os.path.basename(file_path)
+    full_path = os.path.join(folder_name, filename)
+
+    # Copy the file to the new folder
+    # with open(file_path, 'rb') as src_file:
+    #     content = src_file.read()
+
+    # with open(full_path, 'wb') as dest_file:
+    #     dest_file.write(content)
+
+    os.rename(file_path, full_path)
+
+    return full_path
 
 @app.route('/api/start-record', methods=['POST'])
 def start_record():
@@ -130,8 +229,8 @@ def stop_record():
     global is_recording, frames
     is_recording = False
 
-    # Save audio to a .wav file
-    filename = "audio.wav"
+    filename = generate_unique_filename("audio","wav", directory=".")
+    
     with wave.open(filename, 'wb') as wf:
         wf.setnchannels(1)
         wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
@@ -140,10 +239,10 @@ def stop_record():
 
     return jsonify({"message": "Recording stopped", "filename": filename})
 
-def transcribe_audio(filename):
+def transcribe_audio(audio_recording):
     client = speech.SpeechClient()
     
-    with open(filename, 'rb') as audio_file:
+    with open(audio_recording, 'rb') as audio_file:
         content = audio_file.read()
 
     # The name of the audio file to transcribe
@@ -153,23 +252,29 @@ def transcribe_audio(filename):
         sample_rate_hertz=16000,
         language_code="en-US",
     )
-
     response = client.recognize(config=config, audio=audio)
-
+    
+    save_to_folder("./audio_recordings", audio_recording)
+    
     # Print the transcription result
     for result in response.results:
-        print("Transcript: {}".format(result.alternatives[0].transcript))
+        transcript = "Transcript: {}".format(result.alternatives[0].transcript)
+        # print("Transcript: {}".format(result.alternatives[0].transcript))
+        
         return result.alternatives[0].transcript
     return ""
 
 def get_response(user_input):
+    text_filename = generate_unique_filename("transcription-generatedResponse","txt", directory=".")
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(
             f"You are an IELTS examiner. Respond to the following candidate answer: '{user_input}'"
         )
-        print(f"User Input: {user_input}")  # Log user input
-        print(f"AI Response: {response.text}")  # Log AI response
+        write_text_to_file(user_input, text_filename, "./transcipts")
+        write_text_to_file(response.text, text_filename, "./generated_response")
+        # print(f"User Input: {user_input}")  # Log user input
+        # print(f"AI Response: {response.text}")  # Log AI response
         return response.text
     except Exception as e:
         return str(e)
@@ -189,10 +294,6 @@ def generate_response():
     except Exception as e:
         return jsonify({"error": str(e)}), 500    
  
-# @app.route("/api/record", methods=["POST"])
-# def record():
-#     audio_file = start_record()
-#     return jsonify({"status": "success", "audio_file": audio_file})
 
 # Flask route to handle transcription
 @app.route("/api/transcribe", methods=["POST"])
