@@ -6,26 +6,46 @@ WORKDIR /app
 
 # Copy the current directory contents into the container at /app
 COPY . /app
+# COPY ./pulseaudio-1.1 /app/
 
 # Install system dependencies for PortAudio
+# RUN apt-get update --fix-missing? && apt-get install -y \
+#     alsa-utils \
+#     jackd2 \
+#     libasound2 \
+#     libasound2-dev \
+#     libjack-jackd2-dev \
+#     portaudio19-dev \
+#     libsndfile1 \
+#     sox\
+#     build-essential \
+#     ffmpeg \
+#     && apt-get clean
+
 RUN apt-get update && apt-get install -y \
-    alsa-utils \
-    pulseaudio \
-    jackd2 \
-    libasound2-dev \
-    libjack-jackd2-dev \
+    gcc \
     portaudio19-dev \
-    libsndfile1 \
-    sox\
+    libasound2-dev \
+    pulseaudio\
+    alsa-utils\
+    libjack-jackd2-dev \
     && apt-get clean
 
+
+
 # Set environment variables for audio
-ENV PULSE_SERVER=host.docker.internal
+# ENV PULSE_SERVER=host.docker.internal
+ENV PULSE_SERVER=unix:/tmp/pulse-native
+
+RUN mkdir -p /tmp/pulse
+
+COPY requirements.txt .
 
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=100 -r requirements.txt
+
 
 # Copy the service account key file (update the filename)
 COPY service-account-key.json /app/service-account-key.json

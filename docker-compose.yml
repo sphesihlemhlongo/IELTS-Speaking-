@@ -2,15 +2,23 @@ services:
   backend:
     build:
       context: ./ielts_simulation
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     env_file:
       - ./ielts_simulation/.env
+    environment:
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1
+      
+
       
   frontend:
     build:
       context: ./ielts-frontend
+      dockerfile: Dockerfile
     ports:
       - "80:80"
+
   
   

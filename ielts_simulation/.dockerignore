@@ -2,3 +2,7 @@
 node_modules
 __pycache__
 *.pyc
+ielts_simulation/audio_recordings
+ielts_simulation\sessions
+ielts_simulation/transcipts
+ielts_simulation\generated_response
