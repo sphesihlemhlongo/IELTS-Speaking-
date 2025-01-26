@@ -7,11 +7,16 @@ services:
       - "5000:5000"
     env_file:
       - ./ielts_simulation/.env
+    privileged: true  # Use cautiously, grants full device access
+    volumes:
+      - /dev/snd:/dev/snd
+    group_add:
+      - audio
     environment:
       - FLASK_ENV=development
       - PYTHONUNBUFFERED=1
+       - PULSE_SERVER=unix:/run/user/1000/pulse/native
       
-
       
   frontend:
     build:
@@ -20,5 +25,4 @@ services:
     ports:
       - "80:80"
 
-  
   

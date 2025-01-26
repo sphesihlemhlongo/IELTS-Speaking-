@@ -31,20 +31,21 @@ RUN apt-get update && apt-get install -y \
     libjack-jackd2-dev \
     && apt-get clean
 
-
+RUN getent group audio || groupadd -r audio
+RUN usermod -aG audio app_user || true
 
 # Set environment variables for audio
 # ENV PULSE_SERVER=host.docker.internal
-ENV PULSE_SERVER=unix:/tmp/pulse-native
+# ENV PULSE_SERVER=unix:/tmp/pulse-native
 
-RUN mkdir -p /tmp/pulse
+# RUN mkdir -p /tmp/pulse
 
-COPY requirements.txt .
+# COPY requirements.txt .
 
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir --default-timeout=100 -r requirements.txt
+# RUN pip install --upgrade pip
+RUN pip install --default-timeout=100 -r requirements.txt
 
 
 # Copy the service account key file (update the filename)
