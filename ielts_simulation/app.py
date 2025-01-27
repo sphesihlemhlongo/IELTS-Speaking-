@@ -263,7 +263,7 @@ def transcribe_audio(audio_recording):
     )
     response = client.recognize(config=config, audio=audio)
     
-    save_to_folder("./audio_recordings", audio_recording)
+  
     
     # Print the transcription result
     for result in response.results:
