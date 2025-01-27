@@ -1,6 +1,4 @@
 import os
-# import pyaudio
-# import wave
 import time
 import uuid
 import numpy as np

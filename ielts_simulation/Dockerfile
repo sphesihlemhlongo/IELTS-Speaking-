@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y \
     libasound2-dev \
     pulseaudio\
     alsa-utils\
+    alsa-base\
     libjack-jackd2-dev \
     && apt-get clean
 
