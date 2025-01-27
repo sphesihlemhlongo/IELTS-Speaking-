@@ -93,6 +93,7 @@ def next_question():
     section = session.get("current_section", "part_1")
     question_index = session.get("question_index", 0)
     filename = session.get("filename")
+    frames = []
 
     if not filename:
         return jsonify({"error": "Session not started."}), 400
@@ -150,55 +151,55 @@ def generate_unique_filename(base_name="file", extension="txt", directory="."):
         if not os.path.exists(full_path):
             return filename
 
-def write_text_to_file(text, filename, directory="./text_files"):
-    """
-    Write the given text to a specified file in the given directory.
+# def write_text_to_file(text, filename, directory="./text_files"):
+#     """
+#     Write the given text to a specified file in the given directory.
 
-    Parameters:
-        text (str): The text content to write to the file.
-        filename (str): The name of the file.
-        directory (str): The directory to save the file.
+#     Parameters:
+#         text (str): The text content to write to the file.
+#         filename (str): The name of the file.
+#         directory (str): The directory to save the file.
 
-    Returns:
-        str: Full path to the written text file.
-    """
-    # Ensure the directory exists
-    os.makedirs(directory, exist_ok=True)
+#     Returns:
+#         str: Full path to the written text file.
+#     """
+#     # Ensure the directory exists
+#     os.makedirs(directory, exist_ok=True)
 
-    full_path = os.path.join(directory, filename)
-    with open(full_path, 'w', encoding='utf-8') as file:
-        file.write(text)
+#     full_path = os.path.join(directory, filename)
+#     with open(full_path, 'w', encoding='utf-8') as file:
+#         file.write(text)
 
-    return full_path
+#     return full_path
 
-def save_to_folder(folder_name, file_path):
-    """
-    Save an existing file to the specified folder.
+# def save_to_folder(folder_name, file_path):
+#     """
+#     Save an existing file to the specified folder.
 
-    Parameters:
-        folder_name (str): The name of the folder where the file should be saved.
-        file_path (str): The path to the existing file.
+#     Parameters:
+#         folder_name (str): The name of the folder where the file should be saved.
+#         file_path (str): The path to the existing file.
 
-    Returns:
-        str: Full path to the saved file in the new folder.
-    """
-    # Ensure the folder exists
-    os.makedirs(folder_name, exist_ok=True)
+#     Returns:
+#         str: Full path to the saved file in the new folder.
+#     """
+#     # Ensure the folder exists
+#     os.makedirs(folder_name, exist_ok=True)
 
-    # Get the filename from the provided file path
-    filename = os.path.basename(file_path)
-    full_path = os.path.join(folder_name, filename)
+#     # Get the filename from the provided file path
+#     filename = os.path.basename(file_path)
+#     full_path = os.path.join(folder_name, filename)
 
-    # Copy the file to the new folder
-    # with open(file_path, 'rb') as src_file:
-    #     content = src_file.read()
+#     # Copy the file to the new folder
+#     # with open(file_path, 'rb') as src_file:
+#     #     content = src_file.read()
 
-    # with open(full_path, 'wb') as dest_file:
-    #     dest_file.write(content)
+#     # with open(full_path, 'wb') as dest_file:
+#     #     dest_file.write(content)
 
-    os.rename(file_path, full_path)
+#     os.rename(file_path, full_path)
 
-    return full_path
+#     return full_path
 
 
 @app.route('/api/start-record', methods=['POST'])
@@ -210,8 +211,8 @@ def start_record():
     def record():
         global is_recording, frames
         samplerate = 16000  # Sample rate
-        
-        # frames = []
+        blocksize = 1024
+        frames = []
         def callback(indata, frames_count, time, status):
             if is_recording:
                 frames.append(indata.copy())
@@ -240,7 +241,7 @@ def stop_record():
     is_recording = False
 
     # Save audio to a .wav file
-    filename = generate_unique_filename("audio","wav", directory=".")
+    filename = "audio.wav"
     frames_array = np.concatenate(frames, axis=0)  # Convert list of numpy arrays to bytes
 
     write(filename, samplerate, frames_array.astype(np.int16))
@@ -248,10 +249,10 @@ def stop_record():
     return jsonify({"message": "Recording stopped", "filename": filename})
 
 
-def transcribe_audio(audio_recording):
+def transcribe_audio(filename):
     client = speech.SpeechClient()
     
-    with open(audio_recording, 'rb') as audio_file:
+    with open(filename, 'rb') as audio_file:
         content = audio_file.read()
 
     # The name of the audio file to transcribe
@@ -261,27 +262,24 @@ def transcribe_audio(audio_recording):
         sample_rate_hertz=16000,
         language_code="en-US",
     )
+
     response = client.recognize(config=config, audio=audio)
-    
-  
-    
+
     # Print the transcription result
     for result in response.results:
-        transcript = "Transcript: {}".format(result.alternatives[0].transcript)
-        # print("Transcript: {}".format(result.alternatives[0].transcript))
-        
+        print("Transcript: {}".format(result.alternatives[0].transcript))
         return result.alternatives[0].transcript
     return ""
 
 def get_response(user_input):
-    text_filename = generate_unique_filename("transcription-generatedResponse","txt", directory=".")
+    # text_filename = generate_unique_filename("transcription-generatedResponse","txt", directory=".")
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(
             f"You are an IELTS examiner. Respond to the following candidate answer: '{user_input}'"
         )
-        write_text_to_file(user_input, text_filename, "./transcipts")
-        write_text_to_file(response.text, text_filename, "./generated_response")
+        # write_text_to_file(user_input, text_filename, "./transcipts")
+        # write_text_to_file(response.text, text_filename, "./generated_response")
         # print(f"User Input: {user_input}")  # Log user input
         # print(f"AI Response: {response.text}")  # Log AI response
         return response.text
