@@ -22,15 +22,18 @@ COPY . /app
 #     ffmpeg \
 #     && apt-get clean
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get clean && apt-get update && \
+    apt-get install -y --no-install-recommends \
     gcc \
+    build-essential \
     portaudio19-dev \
     libasound2-dev \
-    pulseaudio\
-    alsa-utils\
-    alsa-base\
-    libjack-jackd2-dev \
-    && apt-get clean
+    pulseaudio \
+    python3-dev \
+    alsa-utils \
+    libjack-jackd2-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 
 RUN getent group audio || groupadd -r audio
 RUN usermod -aG audio app_user || true
@@ -45,7 +48,8 @@ RUN usermod -aG audio app_user || true
 
 
 # Install any needed packages specified in requirements.txt
-# RUN pip install --upgrade pip
+RUN pip cache purge
+RUN pip install --upgrade pip
 RUN pip install --default-timeout=100 -r requirements.txt
 
 
